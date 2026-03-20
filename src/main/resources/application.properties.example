@@ -13,19 +13,19 @@ spring.jpa.open-in-view=false
 
 # JWT
 jwt.secret=${JWT_SECRET}
-jwt.expiration=***REMOVED***
+jwt.expiration=${EXPIRATION}
 
 # Mail
-spring.mail.host=***REMOVED***
-spring.mail.port=***REMOVED***
+spring.mail.host={MAIL_HOST}
+spring.mail.port=#{MAIL_PORT}
 spring.mail.username=${MAIL_NAME}
 spring.mail.password=${MAIL_PASSWORD}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
 # Password Reset
-app.frontend.url=***REMOVED***
-app.password-reset.expiration-hours=***REMOVED***
+app.frontend.url=${PASS_WORD_RESET}
+app.password-reset.expiration-hours=${PASS_EXPIRATION}
 
 # Server
-server.port=***REMOVED***
+server.port=${SERVER_PORT}
