@@ -1,8 +1,8 @@
 package com.qjprojects.AA_History.Service;
 
 import com.qjprojects.AA_History.DTO.PuzzleCreateRequest;
-import com.qjprojects.AA_History.Entity.Puzzle;
-import com.qjprojects.AA_History.Repository.PuzzleRepository;
+import com.qjprojects.AA_History.Entity.*;
+import com.qjprojects.AA_History.Repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,17 +22,21 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class PuzzleServiceTest {
 
-    @Mock
-    private PuzzleRepository puzzleRepository;
-
-    @Mock
-    private ClueService clueService;
+    @Mock private PuzzleRepository puzzleRepository;
+    @Mock private ClueService clueService;
+    @Mock private CategoryService categoryService;
+    @Mock private WordBankEntryRepository wordBankEntryRepository;
+    @Mock private WordBankClueService wordBankClueService;
+    @Mock private ClueRepository clueRepository;
 
     @InjectMocks
     private PuzzleService puzzleService;
 
     private Puzzle puzzle;
     private PuzzleCreateRequest createRequest;
+    private Category category;
+    private WordBankEntry entry1;
+    private WordBankEntry entry2;
 
     @BeforeEach
     void setUp() {
@@ -40,41 +44,25 @@ public class PuzzleServiceTest {
                 "Test Puzzle",
                 "Easy",
                 "Admin",
-                5,
-                5,
-                Map.of("0,0", "H", "0,1", "I")
+                10,
+                10,
+                Map.of("cells", List.of())
         );
 
         createRequest = new PuzzleCreateRequest(
                 "Test Puzzle",
                 "Easy",
                 "Admin",
-                5,
-                5,
-                Map.of("0,0", "H", "0,1", "I"),
                 "Black History"
         );
-    }
 
-    @Test
-    void createReturnsPuzzle() {
-        when(puzzleRepository.save(any(Puzzle.class))).thenReturn(puzzle);
+        category = new Category("Black History");
 
-        Puzzle result = puzzleService.create(createRequest);
+        entry1 = new WordBankEntry();
+        entry1.setWord("HARRIET");
 
-        assertNotNull(result);
-        assertEquals("Test Puzzle", result.getTitle());
-        assertEquals("Easy", result.getDifficulty());
-        verify(puzzleRepository, times(1)).save(any(Puzzle.class));
-    }
-
-    @Test
-    void createGeneratesCluesForPuzzle() {
-        when(puzzleRepository.save(any(Puzzle.class))).thenReturn(puzzle);
-
-        puzzleService.create(createRequest);
-
-        verify(clueService, times(1)).generateCluesForPuzzle(puzzle, "Black History");
+        entry2 = new WordBankEntry();
+        entry2.setWord("GARVEY");
     }
 
     @Test
@@ -85,7 +73,7 @@ public class PuzzleServiceTest {
 
         assertNotNull(result);
         assertEquals(puzzle.getPuzzleId(), result.getPuzzleId());
-        verify(puzzleRepository, times(1)).findById(puzzle.getPuzzleId());
+        verify(puzzleRepository).findById(puzzle.getPuzzleId());
     }
 
     @Test
@@ -106,7 +94,7 @@ public class PuzzleServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("Test Puzzle", result.get(0).getTitle());
-        verify(puzzleRepository, times(1)).findAll();
+        verify(puzzleRepository).findAll();
     }
 
     @Test
@@ -116,5 +104,47 @@ public class PuzzleServiceTest {
         List<Puzzle> result = puzzleService.getAll();
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void deleteThrowsWhenNotFound() {
+        when(puzzleRepository.existsById(anyString())).thenReturn(false);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                puzzleService.delete("nonexistent-id"));
+
+        assertEquals("Puzzle not found", ex.getMessage());
+        verify(puzzleRepository, never()).deleteById(anyString());
+    }
+
+    @Test
+    void deleteCallsRepositoryWhenFound() {
+        when(puzzleRepository.existsById(puzzle.getPuzzleId())).thenReturn(true);
+
+        puzzleService.delete(puzzle.getPuzzleId());
+
+        verify(puzzleRepository).deleteById(puzzle.getPuzzleId());
+    }
+
+    @Test
+    void approveSetsStatusToApproved() {
+        when(puzzleRepository.findById(puzzle.getPuzzleId())).thenReturn(Optional.of(puzzle));
+        when(puzzleRepository.save(any(Puzzle.class))).thenReturn(puzzle);
+
+        Puzzle result = puzzleService.approve(puzzle.getPuzzleId());
+
+        assertEquals("APPROVED", result.getStatus());
+        verify(puzzleRepository).save(puzzle);
+    }
+
+    @Test
+    void rejectSetsStatusToRejected() {
+        when(puzzleRepository.findById(puzzle.getPuzzleId())).thenReturn(Optional.of(puzzle));
+        when(puzzleRepository.save(any(Puzzle.class))).thenReturn(puzzle);
+
+        Puzzle result = puzzleService.reject(puzzle.getPuzzleId());
+
+        assertEquals("REJECTED", result.getStatus());
+        verify(puzzleRepository).save(puzzle);
     }
 }

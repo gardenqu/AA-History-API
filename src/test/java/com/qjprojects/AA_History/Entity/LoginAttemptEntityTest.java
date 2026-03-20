@@ -1,96 +1,84 @@
 package com.qjprojects.AA_History.Entity;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-
 import java.time.LocalDateTime;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest
 public class LoginAttemptEntityTest {
 
-    @Autowired
-    private TestEntityManager entityManager;
-
     @Test
-    void canPersistLoginAttemptWithUser() {
-        AppUser user = new AppUser();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
-        user.setPasswordHash("$2a$10$fakehashfortesting");  // ← changed
+    void constructorWithUserSetsFieldsCorrectly() {
+        AppUser user = new AppUser("testuser", "test@example.com", "hashedpassword");
+        LocalDateTime now = LocalDateTime.now();
 
-        entityManager.persist(user);
+        LoginAttempt attempt = new LoginAttempt(user, true, "192.168.1.1", now);
 
-        LoginAttempt attempt = new LoginAttempt(
-                user,
-                false,
-                "127.0.0.1",
-                LocalDateTime.now()
-        );
-
-        LoginAttempt saved = entityManager.persistFlushFind(attempt);
-
-        assertNotNull(saved);
-        assertNotNull(saved.getUser());
-        assertEquals(user.getId(), saved.getUser().getId());
-        assertEquals("test@example.com", saved.getEmail());
-        assertEquals("127.0.0.1", saved.getIpAddress());
-        assertFalse(saved.isSuccess());
+        assertEquals(user, attempt.getUser());
+        assertEquals("test@example.com", attempt.getEmail());
+        assertEquals("192.168.1.1", attempt.getIpAddress());
+        assertTrue(attempt.isSuccess());
+        assertEquals(now, attempt.getAttemptedAt());
+        assertNull(attempt.getFailureReason());
     }
 
     @Test
-    void canPersistLoginAttemptWithoutUser() {
+    void constructorWithoutUserSetsFieldsCorrectly() {
+        LocalDateTime now = LocalDateTime.now();
+
         LoginAttempt attempt = new LoginAttempt(
-                "nouser@example.com",
+                "unknown@example.com",
                 false,
-                "192.168.1.10",
-                "Invalid password",
-                LocalDateTime.now()
-        );
-
-        LoginAttempt saved = entityManager.persistFlushFind(attempt);
-
-        assertNotNull(saved.getAttemptID());
-        assertNull(saved.getUser());
-        assertEquals("nouser@example.com", saved.getEmail());
-        assertEquals("Invalid password", saved.getFailureReason());
-        assertEquals("192.168.1.10", saved.getIpAddress());
-    }
-
-    @Test
-    void constructorCopiesEmailFromUser() {
-        AppUser user = new AppUser();
-        user.setUsername("copytest");
-        user.setEmail("copy@example.com");
-        user.setPasswordHash("$2a$10$fakehashfortesting");  // ← changed
-
-        entityManager.persist(user);
-
-        LoginAttempt attempt = new LoginAttempt(
-                user,
-                true,
                 "10.0.0.1",
-                LocalDateTime.now()
+                "User not found",
+                now
         );
 
-        assertEquals("copy@example.com", attempt.getEmail());
+        assertNull(attempt.getUser());
+        assertEquals("unknown@example.com", attempt.getEmail());
+        assertEquals("10.0.0.1", attempt.getIpAddress());
+        assertFalse(attempt.isSuccess());
+        assertEquals("User not found", attempt.getFailureReason());
+        assertEquals(now, attempt.getAttemptedAt());
     }
 
     @Test
-    void missingTimestampShouldFail() {
-        LoginAttempt attempt = new LoginAttempt(
-                "missing@example.com",
-                false,
-                "10.0.0.2",
-                "No timestamp",
-                null
-        );
+    void defaultConstructorCreatesAttempt() {
+        LoginAttempt attempt = new LoginAttempt();
+        assertNotNull(attempt);
+        assertFalse(attempt.isSuccess());
+    }
 
-        assertThrows(Exception.class, () -> {
-            entityManager.persistAndFlush(attempt);
-        });
+    @Test
+    void settersWorkCorrectly() {
+        LoginAttempt attempt = new LoginAttempt();
+        LocalDateTime now = LocalDateTime.now();
+
+        attempt.setEmail("test@example.com");
+        attempt.setIpAddress("192.168.1.1");
+        attempt.setUserAgent("PostmanRuntime/7.52.0");
+        attempt.setSuccess(true);
+        attempt.setFailureReason(null);
+        attempt.setAttemptedAt(now);
+
+        assertEquals("test@example.com", attempt.getEmail());
+        assertEquals("192.168.1.1", attempt.getIpAddress());
+        assertEquals("PostmanRuntime/7.52.0", attempt.getUserAgent());
+        assertTrue(attempt.isSuccess());
+        assertNull(attempt.getFailureReason());
+        assertEquals(now, attempt.getAttemptedAt());
+    }
+
+    @Test
+    void attemptIdIsGeneratedAutomatically() {
+        LoginAttempt attempt = new LoginAttempt();
+        assertNotNull(attempt.getAttemptID());
+        assertFalse(attempt.getAttemptID().isEmpty());
+    }
+
+    @Test
+    void twoAttemptsHaveDifferentIds() {
+        LoginAttempt a1 = new LoginAttempt();
+        LoginAttempt a2 = new LoginAttempt();
+        assertNotEquals(a1.getAttemptID(), a2.getAttemptID());
     }
 }

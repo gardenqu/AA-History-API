@@ -62,7 +62,8 @@ public class PuzzleSolveServiceTest {
                 puzzle.getPuzzleId(),
                 120,
                 3,
-                false
+                false,
+                true
         );
     }
 

@@ -4,17 +4,24 @@ import com.qjprojects.AA_History.DTO.AuthResponse;
 import com.qjprojects.AA_History.DTO.LoginRequest;
 import com.qjprojects.AA_History.DTO.RegisterRequest;
 import com.qjprojects.AA_History.Entity.AppUser;
+import com.qjprojects.AA_History.Entity.LoginAttempt;
+import com.qjprojects.AA_History.Entity.Role;
+import com.qjprojects.AA_History.Exception.AuthException;
 import com.qjprojects.AA_History.Repository.AppUserRepository;
+import com.qjprojects.AA_History.Repository.LoginAttemptRepository;
+import com.qjprojects.AA_History.Repository.RoleRepository;
 import com.qjprojects.AA_History.Security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,103 +31,122 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
 
-    @Mock
-    private AppUserRepository userRepository;
+    @Mock private AppUserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private JwtService jwtService;
+    @Mock private RoleRepository roleRepository;
+    @Mock private LoginAttemptRepository loginAttemptRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @InjectMocks private AuthService authService;
 
-    @Mock
-    private JwtService jwtService;
-
-    @InjectMocks
-    private AuthService authService;
-
-    private RegisterRequest registerRequest;
-    private LoginRequest loginRequest;
+    private AppUser mockUser;
+    private Role userRole;
 
     @BeforeEach
     void setUp() {
-        registerRequest = new RegisterRequest(
+        userRole = new Role();
+        userRole.setName("USER");
+
+        mockUser = new AppUser("testuser", "test@example.com", "hashedpassword");
+        mockUser.getRoles().add(userRole);
+    }
+
+    @Test
+    void registerCreatesUserAndReturnsToken() {
+        RegisterRequest request = new RegisterRequest(
                 "testuser",
                 "test@example.com",
                 "password123",
-                null,
+                "Test User",
                 null,
                 null
         );
 
-        loginRequest = new LoginRequest(
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
+        when(userRepository.save(any(AppUser.class))).thenReturn(mockUser);
+        when(jwtService.generateToken(any(AppUser.class))).thenReturn("jwt-token");
+
+        AuthResponse response = authService.register(request);
+
+        assertNotNull(response);
+        assertEquals("jwt-token", response.getToken());
+        verify(userRepository).save(any(AppUser.class));
+    }
+
+    @Test
+    void registerThrowsWhenUserRoleNotFound() {
+        RegisterRequest request = new RegisterRequest(
+                "testuser",
                 "test@example.com",
-                "password123"
+                "password123",
+                "Test User",
+                null,
+                null
         );
+        when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> authService.register(request));
     }
 
     @Test
-    void registerReturnsTokenAndUser() {
-        when(passwordEncoder.encode(anyString())).thenReturn("$2a$hashedpassword");
-        when(userRepository.save(any(AppUser.class))).thenAnswer(i -> i.getArgument(0));
-        when(jwtService.generateToken(any(AppUser.class))).thenReturn("mock.jwt.token");
+    void loginSuccessReturnsTokenAndLogsAttempt() {
+        LoginRequest request = new LoginRequest("test@example.com", "password123");
 
-        AuthResponse response = authService.register(registerRequest);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches("password123", "hashedpassword")).thenReturn(true);
+        when(jwtService.generateToken(any(AppUser.class))).thenReturn("jwt-token");
+
+        AuthResponse response = authService.login(request);
 
         assertNotNull(response);
-        assertEquals("mock.jwt.token", response.getToken());
-        assertNotNull(response.getUser());
-        assertEquals("testuser", response.getUser().getUsername());
+        assertEquals("jwt-token", response.getToken());
 
-        verify(userRepository, times(1)).save(any(AppUser.class));
-        verify(jwtService, times(1)).generateToken(any(AppUser.class));
+        ArgumentCaptor<LoginAttempt> captor = ArgumentCaptor.forClass(LoginAttempt.class);
+        verify(loginAttemptRepository).save(captor.capture());
+        assertTrue(captor.getValue().isSuccess());
     }
 
     @Test
-    void registerEncodesPassword() {
-        when(passwordEncoder.encode("password123")).thenReturn("$2a$hashedpassword");
-        when(userRepository.save(any(AppUser.class))).thenAnswer(i -> i.getArgument(0));
-        when(jwtService.generateToken(any(AppUser.class))).thenReturn("mock.jwt.token");
+    void loginFailsWhenUserNotFoundAndLogsAttempt() {
+        LoginRequest request = new LoginRequest("unknown@example.com", "password123");
 
-        authService.register(registerRequest);
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
 
-        verify(passwordEncoder, times(1)).encode("password123");
+        assertThrows(AuthException.class, () -> authService.login(request));
+
+        ArgumentCaptor<LoginAttempt> captor = ArgumentCaptor.forClass(LoginAttempt.class);
+        verify(loginAttemptRepository).save(captor.capture());
+        assertFalse(captor.getValue().isSuccess());
+        assertEquals("User not found", captor.getValue().getFailureReason());
     }
 
     @Test
-    void loginSuccessReturnsToken() {
-        AppUser user = new AppUser("testuser", "test@example.com", "$2a$hashedpassword");
+    void loginFailsWhenWrongPasswordAndLogsAttempt() {
+        LoginRequest request = new LoginRequest("test@example.com", "wrongpassword");
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", "$2a$hashedpassword")).thenReturn(true);
-        when(jwtService.generateToken(any(AppUser.class))).thenReturn("mock.jwt.token");
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches("wrongpassword", "hashedpassword")).thenReturn(false);
 
-        AuthResponse response = authService.login(loginRequest);
+        assertThrows(AuthException.class, () -> authService.login(request));
 
-        assertNotNull(response);
-        assertEquals("mock.jwt.token", response.getToken());
-        verify(jwtService, times(1)).generateToken(user);
+        ArgumentCaptor<LoginAttempt> captor = ArgumentCaptor.forClass(LoginAttempt.class);
+        verify(loginAttemptRepository).save(captor.capture());
+        assertFalse(captor.getValue().isSuccess());
+        assertEquals("Invalid password", captor.getValue().getFailureReason());
     }
 
     @Test
-    void loginWithUnknownEmailThrows() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+    void loginResponseContainsCorrectFields() {
+        LoginRequest request = new LoginRequest("test@example.com", "password123");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                authService.login(loginRequest));
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+        when(jwtService.generateToken(any(AppUser.class))).thenReturn("jwt-token");
 
-        assertEquals("Invalid credentials", ex.getMessage());
-        verify(jwtService, never()).generateToken(any());
-    }
+        AuthResponse response = authService.login(request);
 
-    @Test
-    void loginWithWrongPasswordThrows() {
-        AppUser user = new AppUser("testuser", "test@example.com", "$2a$hashedpassword");
-
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", "$2a$hashedpassword")).thenReturn(false);
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                authService.login(loginRequest));
-
-        assertEquals("Invalid credentials", ex.getMessage());
-        verify(jwtService, never()).generateToken(any());
+        assertEquals("jwt-token", response.getToken());
+        assertEquals("testuser", response.getUsername());
+        assertTrue(response.getRoles().contains("USER"));
     }
 }
