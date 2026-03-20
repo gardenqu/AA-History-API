@@ -1,5 +1,4 @@
 spring.application.name=AA-History
-spring.security.user.password=disabled
 
 # PostgreSQL
 spring.datasource.url=${DB_SOURCE_URL}
