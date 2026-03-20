@@ -21,6 +21,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final JavaMailSender mailSender;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityLogService securityLogService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -31,11 +32,12 @@ public class PasswordResetService {
     public PasswordResetService(AppUserRepository userRepository,
                                 PasswordResetTokenRepository tokenRepository,
                                 JavaMailSender mailSender,
-                                PasswordEncoder passwordEncoder) {
+                                PasswordEncoder passwordEncoder, SecurityLogService securityLogService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
+        this.securityLogService = securityLogService;
     }
 
     @Transactional
@@ -50,6 +52,8 @@ public class PasswordResetService {
 
             tokenRepository.save(resetToken);
             sendResetEmail(user.getEmail(), resetToken.getToken());
+            securityLogService.log(user, "PASSWORD_RESET_REQUESTED");
+
         });
     }
 
@@ -68,6 +72,7 @@ public class PasswordResetService {
 
         // Delete token after use
         tokenRepository.delete(resetToken);
+        securityLogService.log(user, "PASSWORD_CHANGED");
     }
 
     private void sendResetEmail(String email, String token) {
@@ -84,6 +89,8 @@ public class PasswordResetService {
                         "If you did not request this, please ignore this email."
         );
 
+
         mailSender.send(message);
+
     }
 }
