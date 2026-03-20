@@ -1,0 +1,17 @@
+
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: aahistory-db
+    environment:
+      POSTGRES_DB: aahistorydb
+      POSTGRES_USER: aahistory
+      POSTGRES_PASSWORD: aahistory123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
