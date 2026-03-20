@@ -1,0 +1,152 @@
+{
+  "categories": [
+    {
+      "name": "Black History",
+      "word_bank": [
+        {
+          "word": "HARRIET",
+          "clues": [
+            "First name of Tubman, who led enslaved people to freedom through the Underground Railroad",
+            "Her bravery earned her the nickname 'Moses'",
+            "She helped free dozens of enslaved people before the Civil War"
+          ]
+        },
+        {
+          "word": "SELMA",
+          "clues": [
+            "Alabama city central to the 1965 voting rights marches",
+            "Location of the historic Edmund Pettus Bridge",
+            "Site of the march that helped lead to the Voting Rights Act"
+          ]
+        },
+        {
+          "word": "GARVEY",
+          "clues": [
+            "Last name of Marcus, leader of the Pan African movement",
+            "Founded the Universal Negro Improvement Association",
+            "Advocated for Black economic independence"
+          ]
+        },
+        {
+          "word": "JUNETEENTH",
+          "clues": [
+            "Holiday celebrating the emancipation of enslaved Black Americans",
+            "Marks the day freedom was announced in Texas in 1865",
+            "Recognized as a federal holiday in the United States"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Black Music",
+      "word_bank": [
+        {
+          "word": "JAZZ",
+          "clues": [
+            "Music genre pioneered by Black American musicians in the early 20th century",
+            "Often features improvisation and swing rhythms",
+            "Associated with artists like Louis Armstrong and Duke Ellington"
+          ]
+        },
+        {
+          "word": "MOTOWN",
+          "clues": [
+            "Detroit record label that launched many iconic Black American artists",
+            "Founded by Berry Gordy in 1959",
+            "Known for groups like The Supremes and The Temptations"
+          ]
+        },
+        {
+          "word": "ARETHA",
+          "clues": [
+            "First name of Franklin, known as the Queen of Soul",
+            "Singer of 'Respect' and 'Think'",
+            "First woman inducted into the Rock and Roll Hall of Fame"
+          ]
+        },
+        {
+          "word": "BLUES",
+          "clues": [
+            "Music genre rooted in Black American spirituals and work songs",
+            "Often uses a twelve-bar chord progression",
+            "Influenced rock, jazz, and R&B"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Black Literature",
+      "word_bank": [
+        {
+          "word": "HUGHES",
+          "clues": [
+            "Last name of Langston, a key figure of the Harlem Renaissance",
+            "Author of 'The Weary Blues'",
+            "Known for poetry celebrating Black life and culture"
+          ]
+        },
+        {
+          "word": "MORRISON",
+          "clues": [
+            "Last name of Toni, author of Beloved",
+            "First Black woman to win the Nobel Prize in Literature",
+            "Known for novels exploring Black identity and history"
+          ]
+        },
+        {
+          "word": "DUNBAR",
+          "clues": [
+            "Last name of Paul Laurence, one of the first influential Black American poets",
+            "Author of 'We Wear the Mask'",
+            "Wrote in both dialect and standard English"
+          ]
+        },
+        {
+          "word": "ZORA",
+          "clues": [
+            "First name of Hurston, author of Their Eyes Were Watching God",
+            "Anthropologist who documented Black folklore",
+            "Key figure of the Harlem Renaissance"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Black Inventors",
+      "word_bank": [
+        {
+          "word": "LATIMER",
+          "clues": [
+            "Last name of Lewis, who improved the carbon filament for light bulbs",
+            "Worked with Thomas Edison",
+            "Helped make electric lighting practical"
+          ]
+        },
+        {
+          "word": "CARVER",
+          "clues": [
+            "Last name of George Washington, known for agricultural innovations",
+            "Developed hundreds of uses for peanuts and sweet potatoes",
+            "Promoted sustainable farming practices"
+          ]
+        },
+        {
+          "word": "MORGAN",
+          "clues": [
+            "Last name of Garrett, inventor of the safety hood",
+            "Created an early version of the traffic signal",
+            "His inventions improved public safety"
+          ]
+        },
+        {
+          "word": "BOONE",
+          "clues": [
+            "Last name of Sarah, who improved the ironing board design",
+            "Her 1892 patent made ironing sleeves easier",
+            "One of the early Black women inventors in the US"
+          ]
+        }
+      ]
+    }
+  ]
+}

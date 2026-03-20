@@ -1,0 +1,32 @@
+spring.application.name=AA-History
+spring.security.user.password=disabled
+
+# PostgreSQL
+spring.datasource.url=***REMOVED***
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.datasource.username=***REMOVED***
+spring.datasource.password=${DB_PASSWORD}
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.open-in-view=false
+
+# JWT
+jwt.secret=${JWT_SECRET}
+jwt.expiration=***REMOVED***
+
+# Mail
+spring.mail.host=***REMOVED***
+spring.mail.port=***REMOVED***
+spring.mail.username=your-email@gmail.com
+spring.mail.password=${MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Password Reset
+app.frontend.url=***REMOVED***
+app.password-reset.expiration-hours=***REMOVED***
+
+# Server
+server.port=***REMOVED***

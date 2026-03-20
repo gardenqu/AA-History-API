@@ -1,0 +1,19 @@
+package com.qjprojects.AA_History;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class AaHistoryApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+
+
+
+
+
+
