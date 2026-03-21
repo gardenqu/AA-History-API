@@ -6,11 +6,15 @@ import com.qjprojects.AA_History.DTO.RegisterRequest;
 import com.qjprojects.AA_History.Entity.AppUser;
 import com.qjprojects.AA_History.Entity.LoginAttempt;
 import com.qjprojects.AA_History.Entity.Role;
+import com.qjprojects.AA_History.Exception.AuthException;
 import com.qjprojects.AA_History.Repository.AppUserRepository;
 import com.qjprojects.AA_History.Repository.LoginAttemptRepository;
 import com.qjprojects.AA_History.Repository.RoleRepository;
-import com.qjprojects.AA_History.Exception.AuthException;
 import com.qjprojects.AA_History.Security.JwtService;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,19 +30,22 @@ public class AuthService {
     private final JwtService jwtService;
     private final RoleRepository roleRepository;
     private final LoginAttemptRepository loginAttemptRepository;
+    private final AuthenticationManager authenticationManager;
 
     public AuthService(
             AppUserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             RoleRepository roleRepository,
-            LoginAttemptRepository loginAttemptRepository
+            LoginAttemptRepository loginAttemptRepository,
+            AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.roleRepository = roleRepository;
         this.loginAttemptRepository = loginAttemptRepository;
+        this.authenticationManager = authenticationManager;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -60,44 +67,38 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Try to find the user
-        AppUser user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
 
-        // User not found — log failed attempt with no user attached
-        if (user == null) {
+            AppUser user = (AppUser) authentication.getPrincipal();
+
+            // Log successful attempt
+            loginAttemptRepository.save(new LoginAttempt(
+                    user,
+                    true,
+                    null,
+                    LocalDateTime.now()
+            ));
+
+            String token = jwtService.generateToken(user);
+            return buildAuthResponse(token, user);
+
+        } catch (BadCredentialsException e) {
+            // Log failed attempt
             loginAttemptRepository.save(new LoginAttempt(
                     request.getEmail(),
                     false,
                     null,
-                    "User not found",
+                    "Invalid credentials",
                     LocalDateTime.now()
             ));
             throw new AuthException("Invalid credentials");
         }
-
-        // Wrong password — log failed attempt with user attached
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            loginAttemptRepository.save(new LoginAttempt(
-                    request.getEmail(),
-                    false,
-                    null,
-                    "Invalid password",
-                    LocalDateTime.now()
-            ));
-            throw new AuthException("Invalid credentials");
-        }
-
-        // Success — log successful attempt
-        loginAttemptRepository.save(new LoginAttempt(
-                user,
-                true,
-                null,
-                LocalDateTime.now()
-        ));
-
-        String token = jwtService.generateToken(user);
-
-        return buildAuthResponse(token, user);
     }
 
     private AuthResponse buildAuthResponse(String token, AppUser user) {
