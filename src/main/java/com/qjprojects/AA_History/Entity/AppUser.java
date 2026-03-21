@@ -2,6 +2,7 @@ package com.qjprojects.AA_History.Entity;
 
 import jakarta.persistence.*;
 import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name="app_user")
-public class AppUser implements UserDetails {
+public class AppUser implements UserDetails, CredentialsContainer {
 
     @Id
     @Column(name = "user_id", length = 36, nullable = false, updatable = false)
@@ -305,4 +306,9 @@ public class AppUser implements UserDetails {
 
     @Override
     public boolean isEnabled() { return isActive; }
+
+    @Override
+    public void eraseCredentials() {
+        this.passwordHash = null;
+    }
 }
