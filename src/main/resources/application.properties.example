@@ -15,6 +15,9 @@ spring.jpa.open-in-view=false
 jwt.secret=${JWT_SECRET}
 jwt.expiration=${EXPIRATION}
 
+#Google
+google.client-id=${GOOGLE_CLIENT_ID}
+
 # Mail
 spring.mail.host=${MAIL_HOST}
 spring.mail.port=${MAIL_PORT}

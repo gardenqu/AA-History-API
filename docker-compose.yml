@@ -3,11 +3,11 @@
 services:
   postgres:
     image: postgres:16
-    container_name: ***REMOVED***-db
+    container_name: aahistory-db
     environment:
-      POSTGRES_DB: ***REMOVED***db
-      POSTGRES_USER: ***REMOVED***
-      POSTGRES_PASSWORD: ***REMOVED***123
+      POSTGRES_DB: aahistorydb
+      POSTGRES_USER: aahistory
+      POSTGRES_PASSWORD: aahistory123
     ports:
       - "5432:5432"
     volumes:
