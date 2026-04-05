@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -99,6 +100,74 @@ public class AuthService {
             ));
             throw new AuthException("Invalid credentials");
         }
+    }
+
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    public AuthResponse googleLogin(String idToken) {
+        try {
+            // Verify the token with Google
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(),
+                    new GsonFactory()
+            )
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken googleIdToken = verifier.verify(idToken);
+
+            if (googleIdToken == null) {
+                throw new AuthException("Invalid Google token");
+            }
+
+            GoogleIdToken.Payload payload = googleIdToken.getPayload();
+            String googleId = payload.getSubject();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+
+            // Find existing user or create new one
+            AppUser user = userRepository.findByGoogleID(googleId)
+                    .orElseGet(() -> userRepository.findByEmail(email)
+                            .orElseGet(() -> createGoogleUser(googleId, email, name)));
+
+            // If user exists but doesn't have googleID linked yet
+            if (user.getGoogleID() == null) {
+                user.setGoogleID(googleId);
+                user.setOauth(true);
+                userRepository.save(user);
+            }
+
+            // Log successful attempt
+            loginAttemptRepository.save(new LoginAttempt(
+                    user, true, null, LocalDateTime.now()
+            ));
+
+            String token = jwtService.generateToken(user);
+            return buildAuthResponse(token, user);
+
+        } catch (Exception e) {
+            loginAttemptRepository.save(new LoginAttempt(
+                    "unknown", false, null, "Google OAuth failed", LocalDateTime.now()
+            ));
+            throw new AuthException("Google authentication failed");
+        }
+    }
+
+    private AppUser createGoogleUser(String googleId, String email, String name) {
+        AppUser user = new AppUser();
+        user.setUsername(email.split("@")[0] + "_" + UUID.randomUUID().toString().substring(0, 8));
+        user.setEmail(email);
+        user.setName(name);
+        user.setGoogleID(googleId);
+        user.setOauth(true);
+        user.setVerified(true); // Google already verified the email
+
+        Role userRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RuntimeException("USER role not found"));
+        user.getRoles().add(userRole);
+
+        return userRepository.save(user);
     }
 
     private AuthResponse buildAuthResponse(String token, AppUser user) {
