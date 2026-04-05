@@ -15,6 +15,7 @@ A RESTful API for an **African American History crossword puzzle application**. 
 - [Hosting](#hosting)
 - [License](#license)
 
+
 ---
 
 ## Tech Stack
