@@ -78,6 +78,9 @@ public class AppUser implements UserDetails, CredentialsContainer {
     @Column(nullable = false)
     private Boolean isBanned = false;
 
+    @Column
+    private LocalDateTime lockedUntil;
+
     // Roles
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -273,6 +276,13 @@ public class AppUser implements UserDetails, CredentialsContainer {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public LocalDateTime getLockedUntil() {
+        return lockedUntil;
+    }
+
+    public void setLockedUntil(LocalDateTime lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
 
 
     public Boolean getBanned() { return isBanned; }
@@ -299,7 +309,9 @@ public class AppUser implements UserDetails, CredentialsContainer {
     public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() { return isActive; }
+    public boolean isAccountNonLocked() {
+        return lockedUntil == null || LocalDateTime.now().isAfter(lockedUntil);
+    }
 
     @Override
     public boolean isCredentialsNonExpired() { return true; }

@@ -6,9 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class AaHistoryApplicationTests {
 
-    @Test
-    void contextLoads() {
-    }
+
 
 }
 

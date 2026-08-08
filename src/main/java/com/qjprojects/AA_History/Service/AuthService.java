@@ -1,5 +1,9 @@
 package com.qjprojects.AA_History.Service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.qjprojects.AA_History.DTO.AuthResponse;
 import com.qjprojects.AA_History.DTO.LoginRequest;
 import com.qjprojects.AA_History.DTO.RegisterRequest;
@@ -11,14 +15,16 @@ import com.qjprojects.AA_History.Repository.AppUserRepository;
 import com.qjprojects.AA_History.Repository.LoginAttemptRepository;
 import com.qjprojects.AA_History.Repository.RoleRepository;
 import com.qjprojects.AA_History.Security.JwtService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,6 +38,13 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final AuthenticationManager authenticationManager;
+    private final HttpServletRequest httpRequest;
+
+
+
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+    private static final int LOCKOUT_MINUTES = 15;
+
 
     public AuthService(
             AppUserRepository userRepository,
@@ -39,7 +52,7 @@ public class AuthService {
             JwtService jwtService,
             RoleRepository roleRepository,
             LoginAttemptRepository loginAttemptRepository,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager, HttpServletRequest httpRequest
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -47,6 +60,7 @@ public class AuthService {
         this.roleRepository = roleRepository;
         this.loginAttemptRepository = loginAttemptRepository;
         this.authenticationManager = authenticationManager;
+        this.httpRequest = httpRequest;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -79,6 +93,17 @@ public class AuthService {
             AppUser user = (AppUser) authentication.getPrincipal();
 
             // Log successful attempt
+            if (user == null) {
+                throw new BadCredentialsException("User not Found");
+            }
+
+            user.setFailedLoginAttempts(0);
+            user.setLastFailedLogin(null);
+            user.setLockedUntil(null);
+            user.setLastLogin(LocalDateTime.now());
+            user.setLastLoginIP(httpRequest.getRemoteAddr());
+            userRepository.save(user);
+
             loginAttemptRepository.save(new LoginAttempt(
                     user,
                     true,
@@ -91,13 +116,15 @@ public class AuthService {
 
         } catch (BadCredentialsException e) {
             // Log failed attempt
+            handleFailedLogin(request.getEmail());
             loginAttemptRepository.save(new LoginAttempt(
                     request.getEmail(),
                     false,
                     null,
-                    "Invalid credentials",
+                    e.toString(),
                     LocalDateTime.now()
             ));
+
             throw new AuthException("Invalid credentials");
         }
     }
@@ -182,5 +209,30 @@ public class AuthService {
                 roles,
                 user.getProfileComplete()
         );
+    }
+
+    private void handleFailedLogin(String email) {
+
+        AppUser user = userRepository
+                .findByEmail(email)
+                .orElse(null);
+
+        // Don't reveal whether the email exists
+        if (user == null) {
+            return;
+        }
+
+        int attempts = user.getFailedLoginAttempts() + 1;
+
+        user.setFailedLoginAttempts(attempts);
+        user.setLastFailedLogin(LocalDateTime.now());
+
+        if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+            user.setLockedUntil(
+                    LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES)
+            );
+        }
+
+        userRepository.save(user);
     }
 }

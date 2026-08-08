@@ -11,6 +11,7 @@ import com.qjprojects.AA_History.Repository.AppUserRepository;
 import com.qjprojects.AA_History.Repository.LoginAttemptRepository;
 import com.qjprojects.AA_History.Repository.RoleRepository;
 import com.qjprojects.AA_History.Security.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,14 +19,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +39,8 @@ public class AuthServiceTest {
     @Mock private JwtService jwtService;
     @Mock private RoleRepository roleRepository;
     @Mock private LoginAttemptRepository loginAttemptRepository;
+    @Mock private AuthenticationManager authenticationManager;
+    @Mock private HttpServletRequest httpRequest;
 
     @InjectMocks private AuthService authService;
 
@@ -91,9 +96,10 @@ public class AuthServiceTest {
     @Test
     void loginSuccessReturnsTokenAndLogsAttempt() {
         LoginRequest request = new LoginRequest("test@example.com", "password123");
+        Authentication authentication = mock(Authentication.class);
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches("password123", "hashedpassword")).thenReturn(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(mockUser);
         when(jwtService.generateToken(any(AppUser.class))).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(request);
@@ -110,6 +116,8 @@ public class AuthServiceTest {
     void loginFailsWhenUserNotFoundAndLogsAttempt() {
         LoginRequest request = new LoginRequest("unknown@example.com", "password123");
 
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
         when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
 
         assertThrows(AuthException.class, () -> authService.login(request));
@@ -117,30 +125,32 @@ public class AuthServiceTest {
         ArgumentCaptor<LoginAttempt> captor = ArgumentCaptor.forClass(LoginAttempt.class);
         verify(loginAttemptRepository).save(captor.capture());
         assertFalse(captor.getValue().isSuccess());
-        assertEquals("User not found", captor.getValue().getFailureReason());
+        assertEquals("org.springframework.security.authentication.BadCredentialsException: Bad credentials", captor.getValue().getFailureReason());
     }
 
     @Test
     void loginFailsWhenWrongPasswordAndLogsAttempt() {
         LoginRequest request = new LoginRequest("test@example.com", "wrongpassword");
 
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches("wrongpassword", "hashedpassword")).thenReturn(false);
 
         assertThrows(AuthException.class, () -> authService.login(request));
 
         ArgumentCaptor<LoginAttempt> captor = ArgumentCaptor.forClass(LoginAttempt.class);
         verify(loginAttemptRepository).save(captor.capture());
         assertFalse(captor.getValue().isSuccess());
-        assertEquals("Invalid password", captor.getValue().getFailureReason());
+        assertEquals("org.springframework.security.authentication.BadCredentialsException: Bad credentials", captor.getValue().getFailureReason());
     }
 
     @Test
     void loginResponseContainsCorrectFields() {
         LoginRequest request = new LoginRequest("test@example.com", "password123");
+        Authentication authentication = mock(Authentication.class);
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(mockUser);
         when(jwtService.generateToken(any(AppUser.class))).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(request);
