@@ -44,7 +44,9 @@ public class ClueService {
                 request.getNumber(),
                 request.getDirection(),
                 request.getClue(),
-                request.getAnswer()
+                request.getAnswer(),
+                request.getRow(),
+                request.getCol()
         );
 
         return clueRepository.save(clue);
@@ -66,7 +68,9 @@ public class ClueService {
                     clueNumber,
                     "Across",
                     clueText,
-                    entry.getWord()
+                    entry.getWord(),
+                    null,
+                    null
             );
 
             clueRepository.save(clue);

@@ -12,7 +12,9 @@ public class ClueMapper {
                 clue.getDirection(),
                 clue.getNumber(),
                 clue.getClueText(),
-                clue.getAnswer()
+                clue.getAnswer(),
+                clue.getRow(),
+                clue.getCol()
         );
     }
 }

@@ -98,7 +98,9 @@ public class PuzzleService {
                     clueData.getNumber(),
                     clueData.getDirection(),
                     clueData.getClueText(),
-                    clueData.getAnswer()
+                    clueData.getAnswer(),
+                    clueData.getRow(),
+                    clueData.getCol()
             );
             clueRepository.save(clue);
         }

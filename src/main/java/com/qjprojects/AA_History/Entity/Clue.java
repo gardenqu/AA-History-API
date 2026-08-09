@@ -29,15 +29,29 @@ public class Clue {
     @Column(length = 100, nullable = false)
     private String answer;
 
+    @Column
+    private Integer row;
+
+    @Column
+    private Integer col;
+
     public Clue() {}
 
-    public Clue(Puzzle puzzle, Integer number, String direction, String clueText, String answer) {
+    public Clue(Puzzle puzzle, Integer number, String direction, String clueText, String answer, Integer row, Integer col) {
         this.puzzle = puzzle;
         this.number = number;
         this.direction = direction;
         this.clueText = clueText;
         this.answer = answer;
+        this.row = row;
+        this.col = col;
     }
+
+    public Integer getRow() { return row; }
+    public void setRow(Integer row) { this.row = row; }
+    public Integer getCol() { return col; }
+    public void setCol(Integer col) { this.col = col; }
+
 
     @Override
     public String toString() {

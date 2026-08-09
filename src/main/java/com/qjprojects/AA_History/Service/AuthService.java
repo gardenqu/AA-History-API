@@ -90,11 +90,18 @@ public class AuthService {
                     )
             );
 
+
             AppUser user = (AppUser) authentication.getPrincipal();
 
             // Log successful attempt
             if (user == null) {
                 throw new BadCredentialsException("User not Found");
+            }
+
+            if (user.getLockedUntil() != null) {
+                if (user.getLockedUntil().isAfter(LocalDateTime.now())) {
+                    throw new AuthException("Account is locked. Try again later.");
+                }
             }
 
             user.setFailedLoginAttempts(0);
